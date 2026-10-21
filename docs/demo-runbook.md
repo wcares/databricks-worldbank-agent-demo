@@ -5,6 +5,7 @@ https://dbc-3e5e3ff8-a3ea.cloud.databricks.com (Free Edition).
 
 ## Before the demo (20 minutes ahead)
 
+0. Do not rebuild or re-evaluate on demo day: the Free Edition daily compute limit (see below) would stop the demo.
 1. `scripts/warmup.sh` — starts the SQL warehouse, wakes the agent endpoint (it scales to zero on Free Edition;
    the first answer after idle can take minutes), refreshes the ops tables. Wait for `ready`.
 2. Open these tabs:
@@ -67,6 +68,10 @@ WHERE action_name = 'updatePermissions' ORDER BY event_time DESC;  -- action nam
 
 ## Free Edition notes for the audience
 
+- **Daily compute limit.** Free Edition stops all compute once a daily allowance is used ("you have hit your
+  free daily limit. Please come back again tomorrow", hit on 2026-10-21 after a day of builds and evaluations).
+  On demo day run only `scripts/warmup.sh` and the demo itself: no full pipeline runs, no evaluations, no
+  redeploys. Rehearse on a different day from the demo.
 - Serving endpoints must scale to zero, so the first request after idle is slow — hence the warm-up.
 - No inference tables on agent endpoints: the request log is built from MLflow traces (`ops.agent_requests`).
 - No job-run or billing system tables: job history comes from the Jobs API (`ops.job_runs`).
