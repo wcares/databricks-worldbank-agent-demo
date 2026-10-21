@@ -226,3 +226,6 @@ __marimo__/
 
 # Claude Code local state
 .claude/
+
+# Third-party sources fetched by scripts (not committed)
+.build/
