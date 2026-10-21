@@ -9,6 +9,14 @@ resources:
         - name: catalog
           default: ${var.catalog}
       tasks:
+        - task_key: ingest_docs
+          notebook_task:
+            notebook_path: ../src/ingest/ingest_docs.py
+        - task_key: parse_chunk_docs
+          depends_on:
+            - task_key: ingest_docs
+          notebook_task:
+            notebook_path: ../src/transform/parse_chunk_docs.py
         - task_key: ingest_wdi
           notebook_task:
             notebook_path: ../src/ingest/ingest_wdi.py
