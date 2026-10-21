@@ -18,3 +18,8 @@ resources:
             - task_key: build_eval_set
           notebook_task:
             notebook_path: ../src/eval/evaluate_and_register.py
+        - task_key: deploy_champion
+          depends_on:
+            - task_key: evaluate_and_register
+          notebook_task:
+            notebook_path: ../src/agents/deploy_agent.py
