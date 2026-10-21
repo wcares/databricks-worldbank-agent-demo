@@ -1,0 +1,6 @@
+resources:
+  dashboards:
+    development_data:
+      display_name: "World Bank development data"
+      file_path: ../src/dashboards/development_data.lvdash.json
+      warehouse_id: ${var.warehouse_id}

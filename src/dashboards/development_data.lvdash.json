@@ -1,0 +1,850 @@
+{
+  "datasets": [
+    {
+      "name": "wide",
+      "displayName": "Indicators by country and year",
+      "query": "SELECT country_name, region, income_level, year, make_date(year, 1, 1) AS year_date,\n  electricity_access_pct, gdp_per_capita_usd, co2_per_capita_t, life_expectancy_years,\n  under5_mortality_per_1000, internet_users_pct, poverty_3usd_day_pct\nFROM wb_demo.gold.country_indicator_wide"
+    },
+    {
+      "name": "latest",
+      "displayName": "Latest values by country",
+      "query": "SELECT country_name, region, income_level,\n  max_by(gdp_per_capita_usd, IF(gdp_per_capita_usd IS NULL, NULL, year)) AS gdp_per_capita_usd,\n  max_by(electricity_access_pct, IF(electricity_access_pct IS NULL, NULL, year)) AS electricity_access_pct,\n  max_by(life_expectancy_years, IF(life_expectancy_years IS NULL, NULL, year)) AS life_expectancy_years,\n  max(year) AS latest_year\nFROM wb_demo.gold.country_indicator_wide GROUP BY ALL"
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          },
+          "widget": {
+            "name": "title",
+            "textbox_spec": "# World Bank development data\nWorld Development Indicators for 20 countries, 2000 onward. Source: World Bank (CC BY 4.0), loaded by the `wb_demo_pipeline` job into `wb_demo.gold`."
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          },
+          "widget": {
+            "name": "f_country",
+            "queries": [
+              {
+                "name": "filter_wide_country_name",
+                "query": {
+                  "datasetName": "wide",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "country_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_latest_country_name",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "country_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "country_name",
+                    "displayName": "Country",
+                    "queryName": "filter_wide_country_name"
+                  },
+                  {
+                    "fieldName": "country_name",
+                    "displayName": "Country",
+                    "queryName": "filter_latest_country_name"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Country"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          },
+          "widget": {
+            "name": "f_region",
+            "queries": [
+              {
+                "name": "filter_wide_region",
+                "query": {
+                  "datasetName": "wide",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_latest_region",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "region",
+                    "displayName": "Region",
+                    "queryName": "filter_wide_region"
+                  },
+                  {
+                    "fieldName": "region",
+                    "displayName": "Region",
+                    "queryName": "filter_latest_region"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Region"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "k_countries",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "countries",
+                      "expression": "COUNT(DISTINCT `country_name`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countries",
+                  "displayName": "Countries"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Countries"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "k_year",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "latest_year",
+                      "expression": "MAX(`latest_year`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "latest_year",
+                  "displayName": "Most recent year in the data"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Most recent year in the data"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "k_elec",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "avg_elec",
+                      "expression": "AVG(`electricity_access_pct`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_elec",
+                  "displayName": "Average electricity access, latest (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average electricity access, latest (%)"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          },
+          "widget": {
+            "name": "l_elec",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "wide",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "year_date",
+                      "expression": "`year_date`"
+                    },
+                    {
+                      "name": "avg(electricity_access_pct)",
+                      "expression": "AVG(`electricity_access_pct`)"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Year"
+                },
+                "y": {
+                  "fieldName": "avg(electricity_access_pct)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "% of population",
+                  "axis": {
+                    "title": "% of population"
+                  }
+                },
+                "color": {
+                  "fieldName": "country_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Access to electricity"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          },
+          "widget": {
+            "name": "l_co2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "wide",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "year_date",
+                      "expression": "`year_date`"
+                    },
+                    {
+                      "name": "avg(co2_per_capita_t)",
+                      "expression": "AVG(`co2_per_capita_t`)"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Year"
+                },
+                "y": {
+                  "fieldName": "avg(co2_per_capita_t)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "t CO2e per person",
+                  "axis": {
+                    "title": "t CO2e per person"
+                  }
+                },
+                "color": {
+                  "fieldName": "country_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "CO2 emissions per capita"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          },
+          "widget": {
+            "name": "l_life",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "wide",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "year_date",
+                      "expression": "`year_date`"
+                    },
+                    {
+                      "name": "avg(life_expectancy_years)",
+                      "expression": "AVG(`life_expectancy_years`)"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Year"
+                },
+                "y": {
+                  "fieldName": "avg(life_expectancy_years)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Years",
+                  "axis": {
+                    "title": "Years"
+                  }
+                },
+                "color": {
+                  "fieldName": "country_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Life expectancy at birth"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          },
+          "widget": {
+            "name": "l_u5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "wide",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "year_date",
+                      "expression": "`year_date`"
+                    },
+                    {
+                      "name": "avg(under5_mortality_per_1000)",
+                      "expression": "AVG(`under5_mortality_per_1000`)"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Year"
+                },
+                "y": {
+                  "fieldName": "avg(under5_mortality_per_1000)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Per 1,000 live births",
+                  "axis": {
+                    "title": "Per 1,000 live births"
+                  }
+                },
+                "color": {
+                  "fieldName": "country_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Under-5 mortality"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 6,
+            "height": 6
+          },
+          "widget": {
+            "name": "b_gdp",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "sum(gdp_per_capita_usd)",
+                      "expression": "SUM(`gdp_per_capita_usd`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "country_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                },
+                "y": {
+                  "fieldName": "sum(gdp_per_capita_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Current US$",
+                  "axis": {
+                    "title": "Current US$"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "GDP per capita, latest year"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 6,
+            "height": 7
+          },
+          "widget": {
+            "name": "t_latest",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "income_level",
+                      "expression": "`income_level`"
+                    },
+                    {
+                      "name": "gdp_per_capita_usd",
+                      "expression": "`gdp_per_capita_usd`"
+                    },
+                    {
+                      "name": "electricity_access_pct",
+                      "expression": "`electricity_access_pct`"
+                    },
+                    {
+                      "name": "life_expectancy_years",
+                      "expression": "`life_expectancy_years`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "country_name",
+                    "displayName": "Country",
+                    "title": "Country",
+                    "order": 100000,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "region",
+                    "displayName": "Region",
+                    "title": "Region",
+                    "order": 100001,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "income_level",
+                    "displayName": "Income group",
+                    "title": "Income group",
+                    "order": 100002,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "gdp_per_capita_usd",
+                    "displayName": "GDP per capita (US$)",
+                    "title": "GDP per capita (US$)",
+                    "order": 100003,
+                    "visible": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "#,##0.0"
+                  },
+                  {
+                    "fieldName": "electricity_access_pct",
+                    "displayName": "Electricity access (%)",
+                    "title": "Electricity access (%)",
+                    "order": 100004,
+                    "visible": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "#,##0.0"
+                  },
+                  {
+                    "fieldName": "life_expectancy_years",
+                    "displayName": "Life expectancy (years)",
+                    "title": "Life expectancy (years)",
+                    "order": 100005,
+                    "visible": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "#,##0.0"
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Latest available value per country (the year can differ by indicator)"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
