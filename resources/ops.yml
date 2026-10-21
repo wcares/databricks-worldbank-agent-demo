@@ -20,3 +20,12 @@ resources:
         - task_key: record_job_runs
           notebook_task:
             notebook_path: ../src/ops/record_job_runs.py
+        - task_key: record_model_versions
+          notebook_task:
+            notebook_path: ../src/ops/record_model_versions.py
+
+  dashboards:
+    agent_operations:
+      display_name: "Agent operations"
+      file_path: ../src/dashboards/agent_operations.lvdash.json
+      warehouse_id: ${var.warehouse_id}
