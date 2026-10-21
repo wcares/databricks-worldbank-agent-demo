@@ -26,13 +26,30 @@ src/ingest/         WDI + Documents & Reports ingestion
 src/transform/      silver / gold tables, parsing, chunking
 src/agents/         supervisor + specialist agents
 src/eval/           evaluation set and judges
-src/ops/            logging helpers, audit views
+src/ops/            audit views, request log, job runs, model versions
+src/dashboards/     dashboard generators and .lvdash.json files
+genie/              Genie space definition and tests
+scripts/            warm-up, grants, alerts, chat app, teardown
 docs/               design notes and phase check results
 ```
 
 ## Status
 
-Phase 0 (workspace check and foundation) — see `docs/phase0-checks.md`.
+All phases built and verified on Databricks Free Edition (2026-10-21):
+data pipeline, Genie space, report index, four-agent workflow, evaluation and promotion gate, serving endpoint,
+chat app, ops tables, dashboards and alerts. Run the demo with `docs/demo-runbook.md`; check results in
+`docs/phase0-checks.md`. Design and build journal: see the design doc linked from the runbook.
+
+## Scripts
+
+| Script | Does |
+| --- | --- |
+| `scripts/warmup.sh` | Wakes the warehouse and the scale-to-zero endpoint before a demo |
+| `scripts/create_identities.sh` | Creates the demo groups and the agent service principal (owner runs it) |
+| `scripts/apply_grants.sh` | Applies `sql/10_grants.sql` (owner runs it) |
+| `scripts/create_alerts.py` | Creates or updates the 3 SQL alerts |
+| `scripts/deploy_chat_app.sh` | Deploys the Databricks chat UI template against the endpoint |
+| `scripts/teardown.sh` | Lists (or with `--yes` deletes) everything the demo created |
 
 ## Data and licence
 
