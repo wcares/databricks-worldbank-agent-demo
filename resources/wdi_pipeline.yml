@@ -1,0 +1,24 @@
+# Phase 1 pipeline: WDI indicators from the World Bank API to gold tables.
+# Later phases add document ingestion, chunking, the vector index and evaluation to this job.
+resources:
+  jobs:
+    wb_demo_pipeline:
+      name: wb_demo_pipeline
+      description: World Bank demo pipeline (bronze -> silver -> gold)
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+      tasks:
+        - task_key: ingest_wdi
+          notebook_task:
+            notebook_path: ../src/ingest/ingest_wdi.py
+        - task_key: clean_wdi
+          depends_on:
+            - task_key: ingest_wdi
+          notebook_task:
+            notebook_path: ../src/transform/clean_wdi.py
+        - task_key: build_gold
+          depends_on:
+            - task_key: clean_wdi
+          notebook_task:
+            notebook_path: ../src/transform/build_gold.py

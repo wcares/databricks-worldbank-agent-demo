@@ -223,3 +223,6 @@ __marimo__/
 .databricks/
 .databrickscfg
 *.token
+
+# Claude Code local state
+.claude/
