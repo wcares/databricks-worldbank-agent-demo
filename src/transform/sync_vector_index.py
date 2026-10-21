@@ -32,13 +32,17 @@ except Exception as e:  # the index does not exist yet
 
 # COMMAND ----------
 
-# Wait (up to 60 min) until the index is ready, so the evaluation task downstream sees fresh data.
+# Wait (up to 60 min) until the index has caught up with the source table: state ONLINE_NO_PENDING_UPDATE
+# (the state observed on a fully synced index, 2026-10-20) AND as many indexed rows as source rows.
+source_rows = spark.table(spec["delta_sync_index_spec"]["source_table"]).count()
+time.sleep(60)  # give a just-triggered sync time to start before the first check
 deadline = time.time() + 3600
 while True:
     s = status()
-    print(s.get("detailed_state"), s.get("indexed_row_count"), s.get("message", "")[:120])
-    if s.get("ready") and "SYNC" not in (s.get("detailed_state") or "").replace("ONLINE_NO_PENDING_UPDATE", ""):
+    state, rows = s.get("detailed_state"), s.get("indexed_row_count")
+    print(f"{state} indexed={rows} source={source_rows}")
+    if s.get("ready") and state == "ONLINE_NO_PENDING_UPDATE" and rows == source_rows:
         break
     if time.time() > deadline:
-        raise TimeoutError(f"{name} not ready after 60 minutes: {s}")
+        raise TimeoutError(f"{name} not caught up after 60 minutes: {s}")
     time.sleep(60)

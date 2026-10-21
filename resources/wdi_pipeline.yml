@@ -17,6 +17,11 @@ resources:
             - task_key: ingest_docs
           notebook_task:
             notebook_path: ../src/transform/parse_chunk_docs.py
+        - task_key: sync_vector_index
+          depends_on:
+            - task_key: parse_chunk_docs
+          notebook_task:
+            notebook_path: ../src/transform/sync_vector_index.py
         - task_key: ingest_wdi
           notebook_task:
             notebook_path: ../src/ingest/ingest_wdi.py
