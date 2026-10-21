@@ -21,8 +21,13 @@ print({p: version(p) for p in ['langgraph', 'langgraph-prebuilt', 'langgraph-sup
 
 # COMMAND ----------
 
+import os
 import re
 import time
+
+dbutils.widgets.text("llm", "databricks-meta-llama-3-3-70b-instruct")
+os.environ["WB_AGENT_LLM"] = dbutils.widgets.get("llm")
+print("LLM:", os.environ["WB_AGENT_LLM"])
 
 from agent import AGENT
 

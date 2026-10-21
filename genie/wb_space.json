@@ -59,11 +59,21 @@
           "Units are in the column comments: _pct columns are percentages (0-100), gdp_per_capita_usd is current US dollars, co2_per_capita_t is tonnes CO2e per person, population is people.",
           "poverty_3usd_day_pct is the share of people living on less than $3.00 a day (2021 PPP); it has gaps, so use the latest year that has a value and say which year it is.",
           "For 'latest' questions use the most recent year with a non-null value for that indicator, per country, and always show the year.",
-          "Do not invent values for missing years; say the data is not available."
+          "Do not invent values for missing years; say the data is not available.",
+          "For change since a year, compare each country's earliest available value from that year onward (within 5 years) with its latest available value, show both years, and never compare a year with itself."
         ]
       }
     ],
     "example_question_sqls": [
+      {
+        "id": "39c2958855fd4d1599ee2f72fe3dd6c2",
+        "question": [
+          "Which three countries reduced extreme poverty the most since 2000?"
+        ],
+        "sql": [
+          "WITH p AS (SELECT country_name, year, poverty_3usd_day_pct AS v FROM wb_demo.gold.country_indicator_wide WHERE poverty_3usd_day_pct IS NOT NULL AND year >= 2000), f AS (SELECT country_name, min(year) AS first_year, min_by(v, year) AS first_value, max(year) AS latest_year, max_by(v, year) AS latest_value FROM p GROUP BY country_name) SELECT country_name, first_year, round(first_value, 1) AS first_value, latest_year, round(latest_value, 1) AS latest_value, round(first_value - latest_value, 1) AS reduction_pct_points FROM f WHERE first_year <= 2005 AND latest_year > first_year ORDER BY reduction_pct_points DESC LIMIT 3"
+        ]
+      },
       {
         "id": "bfa3cf7112704b51b352a9f02215f93e",
         "question": [

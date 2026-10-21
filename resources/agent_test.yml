@@ -4,6 +4,9 @@ resources:
     wb_agent_test:
       name: wb_agent_test
       description: Smoke test of the World Bank multi-agent system
+      parameters:
+        - name: llm
+          default: databricks-meta-llama-3-3-70b-instruct
       tasks:
         - task_key: test_agent
           notebook_task:
