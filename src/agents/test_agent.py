@@ -38,10 +38,17 @@ results = []
 for q in QUESTIONS:
     response = AGENT.predict({"input": [{"role": "user", "content": q}]})
     items = [i if isinstance(i, dict) else i.model_dump() for i in response.output]
-    texts = [c.get("text", "") for item in items if item.get("type") == "message"
-             for c in (item.get("content") or []) if isinstance(c, dict)]
-    agents_called = re.findall(r"<name>(\w+)</name>", " ".join(texts))
-    answer = texts[-1] if texts else ""
-    results.append((q, agents_called, answer))
-    print(f"Q: {q}\nagents: {agents_called}\nA: {answer[:1500]}\n{'-' * 80}")
+    print(f"Q: {q}\n{len(items)} output items:")
+    for it in items:
+        kind = it.get("type")
+        if kind == "message":
+            text = " ".join(c.get("text", "") for c in (it.get("content") or []) if isinstance(c, dict))
+            print(f"  [message] {text[:400]!r}")
+        elif kind == "function_call":
+            print(f"  [function_call] {it.get('name')} {str(it.get('arguments'))[:200]}")
+        elif kind == "function_call_output":
+            print(f"  [function_call_output] {str(it.get('output'))[:200]!r}")
+        else:
+            print(f"  [{kind}]")
+    print("-" * 80)
     time.sleep(20)  # stay under the Free Edition model QPS limit between questions

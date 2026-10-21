@@ -14,6 +14,7 @@ import mlflow
 from databricks_langchain import ChatDatabricks, VectorSearchRetrieverTool
 from databricks_langchain.genie import GenieAgent
 from langchain.agents import create_agent
+from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from langgraph_supervisor import create_supervisor
 from mlflow.pyfunc import ResponsesAgent
@@ -31,6 +32,8 @@ from mlflow.types.responses import (
 LLM_ENDPOINT_NAME = "databricks-meta-llama-3-3-70b-instruct"
 GENIE_SPACE_ID = "01f1ccf0ce021ae2bbdb20a34b5b1c25"
 INDEX_NAME = "wb_demo.gold.doc_chunks_index"
+# Upper bound on supervisor/agent steps per question; stops hand-off loops (seen in testing).
+RECURSION_LIMIT = 20
 
 # Free Edition pay-per-token endpoints have a low workspace QPS limit; one question makes several
 # model calls, so 429s are retried with the OpenAI client's exponential backoff.
@@ -91,12 +94,16 @@ Agents you can call:
 
 How to work:
 1. Decide what the user's latest question needs: numbers, explanation, or both.
-2. Call data_analyst for numbers and document_researcher for explanations. For "what changed and why"
-   questions call both.
+2. Call data_analyst for numbers. You MUST call document_researcher whenever the question asks why,
+   asks for causes, drivers, constraints or policies, or asks what the World Bank or its reports say.
+   A question with both a number and a "why" needs both agents; never explain causes from your own knowledge.
 3. Write one answer. State every number with its year and unit. Cite sources: "World Bank WDI" for
    numbers, and the report title, year, pages and link for report content.
-4. Never invent numbers or citations. If an agent finds nothing, say what is missing.
-5. If the question is not about country development, economics, poverty, energy, climate, health or
+4. Call each agent at most once per question. When the agents have replied, write the final answer
+   yourself and stop; do not call an agent again to improve an answer.
+   Your last message must always be the complete answer in plain prose for the user, never empty.
+5. Never invent numbers or citations. If an agent finds nothing, say what is missing.
+6. If the question is not about country development, economics, poverty, energy, climate, health or
    education, reply that you only answer questions about World Bank development data, and call no agent.
 """
 
@@ -126,9 +133,23 @@ class LangGraphResponsesAgent(ResponsesAgent):
 
     def predict_stream(self, request: ResponsesAgentRequest) -> Generator[ResponsesAgentStreamEvent, None, None]:
         cc_msgs = to_chat_completions_input([i.model_dump() for i in request.input])
+        try:
+            yield from self._stream(cc_msgs)
+        except GraphRecursionError:
+            yield ResponsesAgentStreamEvent(
+                type="response.output_item.done",
+                item=self.create_text_output_item(
+                    text="I could not complete this answer within the step limit. Please ask a narrower question.",
+                    id=str(uuid4()),
+                ),
+            )
+
+    def _stream(self, cc_msgs) -> Generator[ResponsesAgentStreamEvent, None, None]:
         first_message = True
         seen_ids = set()
-        for _, events in self.agent.stream({"messages": cc_msgs}, stream_mode=["updates"]):
+        last_answer, answered_last = "", False
+        for _, events in self.agent.stream({"messages": cc_msgs}, {"recursion_limit": RECURSION_LIMIT},
+                                           stream_mode=["updates"]):
             new_msgs = [msg for v in events.values() for msg in v.get("messages", []) if msg.id not in seen_ids]
             if first_message:
                 seen_ids.update(msg.id for msg in new_msgs[: len(cc_msgs)])
@@ -143,6 +164,21 @@ class LangGraphResponsesAgent(ResponsesAgent):
                 )
             if new_msgs:
                 yield from output_to_responses_items_stream(new_msgs)
+            for msg in new_msgs:
+                text = msg.content if isinstance(msg.content, str) else ""
+                if msg.type == "ai" and text.strip() and not getattr(msg, "tool_calls", None):
+                    last_answer, answered_last = text, True
+                elif msg.type == "ai":
+                    answered_last = False
+            if not first_message and not new_msgs:
+                answered_last = False
+        # Seen in testing: the supervisor sometimes ends with an empty message after one specialist
+        # answered. Repeat the last real answer so the user never gets an empty reply.
+        if not answered_last and last_answer:
+            yield ResponsesAgentStreamEvent(
+                type="response.output_item.done",
+                item=self.create_text_output_item(text=last_answer, id=str(uuid4())),
+            )
 
 
 mlflow.langchain.autolog()
