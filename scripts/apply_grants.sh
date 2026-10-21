@@ -1,18 +1,37 @@
 #!/usr/bin/env bash
-# Applies sql/10_grants.sql statement by statement on the SQL warehouse, then prints the resulting grants.
-# Run by the workspace owner: it changes who can access what. Safe to re-run (GRANT is idempotent).
-# Usage: scripts/apply_grants.sh [warehouse_id]
+# Applies the GRANT statements in sql/10_grants.sql through the Unity Catalog permissions API
+# (databricks grants update), then prints the resulting grants. No SQL warehouse is needed: the first
+# version ran the SQL on the warehouse and failed while the warehouse was stopped.
+# Run by the workspace owner: it changes who can access what. Safe to re-run (adding a grant twice is a no-op).
+# Usage: scripts/apply_grants.sh
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-WH=${1:-33fd48ef78c8fbfa}
-run() {
-  databricks api post /api/2.0/sql/statements --json "$(python3 -c 'import json,sys;print(json.dumps({"warehouse_id":sys.argv[1],"statement":sys.argv[2],"wait_timeout":"50s"}))' "$WH" "$1")" \
-    | python3 -c 'import sys,json;d=json.load(sys.stdin);s=d["status"];print(s["state"], s.get("error",{}).get("message","")[:200]);[print("   ", r) for r in d.get("result",{}).get("data_array",[]) or []]'
-}
-# One statement per line: drop -- comments, split on ';', collapse whitespace.
-python3 -c 'import sys,re;t="\n".join(l for l in open(sys.argv[1]) if not l.strip().startswith("--"));[print(re.sub(r"\s+"," ",x).strip()) for x in t.split(";") if x.strip()]' "$ROOT/sql/10_grants.sql" |
-while IFS= read -r stmt; do
-  [ -z "$stmt" ] && continue
-  printf '%s\n  -> ' "$stmt" | cut -c1-120; run "$stmt"
-done
-for obj in "CATALOG wb_demo" "SCHEMA wb_demo.gold" "SCHEMA wb_demo.ops"; do echo "== grants on $obj"; run "SHOW GRANTS ON $obj"; done
+python3 - "$ROOT/sql/10_grants.sql" <<'EOF'
+import json, re, subprocess, sys
+
+sql = "\n".join(l for l in open(sys.argv[1]) if not l.strip().startswith("--"))
+pattern = re.compile(r"GRANT\s+(.+?)\s+ON\s+(CATALOG|SCHEMA|VOLUME|TABLE)\s+(\S+)\s+TO\s+(.+)", re.I | re.S)
+targets = []
+for stmt in (s.strip() for s in sql.split(";") if s.strip()):
+    m = pattern.fullmatch(re.sub(r"\s+", " ", stmt))
+    if not m:
+        sys.exit(f"cannot parse: {stmt}")
+    privileges = [p.strip().upper().replace(" ", "_") for p in m.group(1).split(",")]
+    principals = [p.strip().strip("`") for p in m.group(4).split(",")]
+    securable, name = m.group(2).lower(), m.group(3)
+    changes = [{"principal": p, "add": privileges} for p in principals]
+    out = subprocess.run(["databricks", "grants", "update", securable, name, "--json", json.dumps({"changes": changes}),
+                         "-o", "json"], capture_output=True, text=True)
+    status = "ok" if out.returncode == 0 else f"FAILED: {out.stderr.strip()[:200]}"
+    print(f"{securable} {name}: {', '.join(privileges)} -> {', '.join(principals)}  [{status}]")
+    if out.returncode != 0:
+        sys.exit(1)
+    targets.append((securable, name))
+
+for securable, name in dict.fromkeys(targets):
+    got = json.loads(subprocess.run(["databricks", "grants", "get", securable, name, "-o", "json"],
+                                    capture_output=True, text=True, check=True).stdout)
+    print(f"== {securable} {name}")
+    for a in got.get("privilege_assignments", []):
+        print(f"   {a['principal']}: {', '.join(sorted(a.get('privileges', [])))}")
+EOF

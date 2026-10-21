@@ -36,7 +36,7 @@ https://dbc-3e5e3ff8-a3ea.cloud.databricks.com (Free Edition).
 | 6 | Chat app: ask the 5 questions below | Model Serving | One endpoint, four agents behind it. | 4 |
 | 7 | MLflow experiment → Traces → the CO2 question | MLflow tracing | Router plan, Genie SQL, retrieved report passages, writer — each step with timing. | 3 |
 | 8 | Experiment → Evaluation runs; model version tags; `champion` alias on v2 | Evaluation, MLflow, UC registry | 20 questions, LLM judges: correctness 0.80 → 0.90; the gate moved `champion` only because v2 scored higher. | 3 |
-| 9 | SQL editor: revoke analysts' read on gold, try it, grant it back (below) | Unity Catalog | Access is enforced and every change is audited. | 2 |
+| 9 | SQL editor: revoke the agent service principal's read on gold, grant it back (below) | Unity Catalog | Access is enforced and every change is audited. | 2 |
 | 10 | Dashboard "Agent operations": failed/denied requests, job runs | Audit logs, system logs | The revoke from step 9 and the failed runs from the build are in the log. | 1 |
 | 11 | Alerts list: "pipeline job failed in the last 24 hours" | Databricks SQL alerts | Paused on Free Edition; evaluate on demand. | 1 |
 
@@ -51,11 +51,14 @@ https://dbc-3e5e3ff8-a3ea.cloud.databricks.com (Free Edition).
 
 ### Step 9: revoke and audit (run as the workspace owner in the SQL editor)
 
+The agent's service principal `wb_agent_sp` has read access to `wb_demo.gold` (`sql/10_grants.sql`). On Free
+Edition grants go to the service principal: workspace-local groups cannot receive Unity Catalog grants.
+
 ```sql
-SHOW GRANTS ON SCHEMA wb_demo.gold;
-REVOKE SELECT ON SCHEMA wb_demo.gold FROM `wb_analysts`;
-SHOW GRANTS ON SCHEMA wb_demo.gold;         -- analysts no longer listed
-GRANT SELECT ON SCHEMA wb_demo.gold TO `wb_analysts`;
+SHOW GRANTS ON SCHEMA wb_demo.gold;                                    -- wb_agent_sp: USE SCHEMA, SELECT
+REVOKE SELECT ON SCHEMA wb_demo.gold FROM `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
+SHOW GRANTS ON SCHEMA wb_demo.gold;                                    -- SELECT gone
+GRANT SELECT ON SCHEMA wb_demo.gold TO `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
 -- a few minutes later (audit logs arrive with a delay):
 SELECT event_time, actor, action_name, request_params
 FROM wb_demo.ops.v_audit_wb_demo

@@ -1,15 +1,11 @@
--- Access roles for the demo (design doc: Governance with Unity Catalog).
--- Applied by the workspace owner (scripts/apply_grants.sh). Groups and the service principal come from
--- scripts/create_identities.sh. Re-running is safe: GRANT is idempotent.
-GRANT USE CATALOG ON CATALOG wb_demo TO `wb_engineers`, `wb_analysts`, `wb_auditors`, `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
+-- Access for the demo (design doc: Governance with Unity Catalog). Applied with scripts/apply_grants.sh.
+--
+-- Free Edition note (2026-10-21): Unity Catalog grants accept only account-level identities. The groups made by
+-- scripts/create_identities.sh (wb_engineers, wb_analysts, wb_auditors) are workspace-local, so Unity Catalog
+-- cannot find them ("Could not find principal with name wb_engineers"). The service principal resolves, so the
+-- grants below go to the agent's service principal wb_agent_sp (application id below). With a paid workspace and
+-- account-level groups, the per-group grants in the design doc apply.
 
--- Engineers build the pipeline: read and write bronze and silver.
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA wb_demo.bronze TO `wb_engineers`;
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA wb_demo.silver TO `wb_engineers`;
-GRANT READ VOLUME, WRITE VOLUME ON VOLUME wb_demo.bronze.raw_docs TO `wb_engineers`;
-
--- Analysts and the agent's service principal read gold only.
-GRANT USE SCHEMA, SELECT ON SCHEMA wb_demo.gold TO `wb_analysts`, `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
-
--- Auditors read the ops schema (audit views, request log, job runs).
-GRANT USE SCHEMA, SELECT ON SCHEMA wb_demo.ops TO `wb_auditors`;
+-- The agent's service principal reads gold only: the tables and index the agents query.
+GRANT USE CATALOG ON CATALOG wb_demo TO `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
+GRANT USE SCHEMA, SELECT ON SCHEMA wb_demo.gold TO `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
