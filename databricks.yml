@@ -1,0 +1,19 @@
+# Databricks Asset Bundle for the World Bank multi-agent demo.
+# Deploy: databricks bundle deploy -t dev
+bundle:
+  name: wb_demo
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds every demo asset
+    default: wb_demo
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-3e5e3ff8-a3ea.cloud.databricks.com
