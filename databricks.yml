@@ -10,6 +10,10 @@ variables:
   catalog:
     description: Unity Catalog catalog that holds every demo asset
     default: wb_demo
+  warehouse_id:
+    description: SQL warehouse for dashboards and Genie
+    lookup:
+      warehouse: Serverless Starter Warehouse
 
 targets:
   dev:
