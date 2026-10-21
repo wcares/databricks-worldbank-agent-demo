@@ -26,7 +26,12 @@ print(f"deploying {MODEL_NAME} version {champion.version} (champion)")
 
 # Free Edition requires scale-to-zero on every serving endpoint (deploy failed without it: "Scale to zero
 # must be enabled for this workspace"). Consequence: the first request after idle is a cold start.
+# Send production traces to the agent experiment, next to the evaluation runs. Without this, deploy
+# uses this notebook's own experiment, which is deleted whenever the notebook is (seen 2026-10-21).
+user = spark.sql("SELECT current_user()").first()[0]
+experiment = mlflow.get_experiment_by_name(f"/Users/{user}/wb_insights_agent")
 deployment = agents.deploy(MODEL_NAME, int(champion.version), endpoint_name="wb-insights-agent", scale_to_zero=True,
+                           environment_vars={"MLFLOW_EXPERIMENT_ID": experiment.experiment_id},
                            tags={"project": "wb_demo"}, deploy_feedback_model=False)
 print("endpoint:", deployment.endpoint_name)
 print("review app:", getattr(deployment, "review_app_url", None))
