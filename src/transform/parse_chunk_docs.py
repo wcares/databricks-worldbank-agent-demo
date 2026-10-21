@@ -10,11 +10,15 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "wb_demo")
-dbutils.widgets.text("chunk_chars", "2000")
+dbutils.widgets.text("chunk_chars", "3000")
 dbutils.widgets.text("overlap_chars", "200")
+# Free Edition embeds ~1 chunk every 2 s, so the index keeps the first N chunks of each report
+# (title page, overview and executive summary come first in these reports).
+dbutils.widgets.text("max_chunks_per_doc", "80")
 CATALOG = dbutils.widgets.get("catalog")
 CHUNK_CHARS = int(dbutils.widgets.get("chunk_chars"))
 OVERLAP = int(dbutils.widgets.get("overlap_chars"))
+MAX_PER_DOC = int(dbutils.widgets.get("max_chunks_per_doc"))
 
 # COMMAND ----------
 
@@ -54,6 +58,9 @@ import json
 import re
 
 KEEP = {"title", "section_header", "text", "table", "caption", "footnote"}
+# Front-matter boilerplate that answers no question about the country.
+BOILERPLATE = ("Rights and Permissions", "Creative Commons Attribution", "Attribution—Please cite the work",
+               "The findings, interpretations, and conclusions expressed in this work")
 TAG = re.compile(r"<[^>]+>")
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
@@ -119,7 +126,13 @@ for p in spark.table(f"{CATALOG}.silver.doc_parsed").collect():
     if status:
         errors.append((p.doc_id, str(status)[:200]))
     year = int(m.doc_date[:4]) if m.doc_date else None
+    kept = 0
     for n, section, p0, p1, text in chunks_for(p.doc_id, p.parsed):
+        if kept >= MAX_PER_DOC:
+            break
+        if any(b in text for b in BOILERPLATE):
+            continue
+        kept += 1
         header = f"{m.title} ({m.doc_type}, {m.doc_date[:4] if m.doc_date else 'n.d.'})" + (f" - {section}" if section else "")
         rows.append(Row(chunk_id=f"{p.doc_id}-{n:04d}", doc_id=p.doc_id, country_iso3=m.country_iso3,
                         doc_type=m.doc_type, title=m.title, doc_year=year, section=section,
