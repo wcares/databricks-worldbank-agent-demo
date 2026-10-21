@@ -170,6 +170,8 @@ Use ONLY the material below. Do not add facts, numbers or sources from your own 
 - State each number with its year and unit, rounded to at most 2 decimals, and cite it as "World Bank WDI".
 - Cite report content with the report title, year, pages and link exactly as given.
 - If a part of the question is not covered by the material, say so plainly.
+- A ranking or "which country" query returns only the top rows: treat them as the answer and do not
+  comment on how many rows or countries the query returned.
 Write a short, clear answer in prose (a small table is fine for comparisons)."""
 
 

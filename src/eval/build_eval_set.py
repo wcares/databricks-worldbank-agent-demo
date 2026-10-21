@@ -40,7 +40,7 @@ add("data", "What was Kenya's access to electricity in 2022?",
 add("data", "What was India's total population in 2020?",
     [f"India's population in 2020 was about {value('IND', 'population', 2020) / 1e9:.2f} billion"])
 add("data", "What was Brazil's GDP per capita in current US dollars in 2023?",
-    [f"Brazil's GDP per capita in 2023 was about US${value('BRA', 'gdp_per_capita_usd', 2023):,.0f}"])
+    [f"Brazil's GDP per capita in 2023 was US${value('BRA', 'gdp_per_capita_usd', 2023):,.2f}"])
 add("data", "What was Nigeria's under-5 mortality rate in 2015?",
     [f"Nigeria's under-5 mortality rate in 2015 was {value('NGA', 'under5_mortality_per_1000', 2015):.1f} per 1,000 live births"])
 add("data", "What was life expectancy at birth in Ghana in 2022?",
@@ -83,7 +83,7 @@ add("reports", "Why does the World Bank say Pakistan is stuck in a cycle of repe
 b0, b1 = value("BGD", "gdp_per_capita_usd", 2010), latest("BGD", "gdp_per_capita_usd")
 add("both", "How has Bangladesh's GDP per capita changed since 2010, and what constraints on growth does the World Bank identify?",
     [f"Bangladesh's GDP per capita was about US${b0:,.0f} in 2010", f"It was about US${b1.v:,.0f} in {b1.year}",
-     "Constraints include declining trade competitiveness, a weak financial sector and unbalanced urbanization"])
+     "Names constraints on growth from the World Bank's Bangladesh Country Economic Memorandum"])
 k0, k1 = value("KEN", "electricity_access_pct", 2010), latest("KEN", "electricity_access_pct")
 add("both", "What was Kenya's access to electricity in 2010 and the latest year, and what does the World Bank say about the role of services in Kenya's growth?",
     [f"Kenya's access to electricity was {k0:.1f}% in 2010", f"It was {k1.v:.1f}% in {k1.year}",
@@ -92,7 +92,7 @@ add("both", "What was Kenya's access to electricity in 2010 and the latest year,
 # --- off_topic: the agent must decline ---
 for q in ["What is the weather in Paris today?", "Give me a recipe for chocolate cake.",
           "Who won the last football World Cup?"]:
-    add("off_topic", q, ["The assistant declines because it only answers questions about World Bank development data"])
+    add("off_topic", q, ["The assistant declines to answer"])
 
 # COMMAND ----------
 
