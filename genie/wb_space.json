@@ -1,0 +1,78 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "58f4d3819cea42d2825028862d619d10",
+        "question": [
+          "How has Kenya's access to electricity changed since 2010?"
+        ]
+      },
+      {
+        "id": "978141ddeab34429adcf28b3d0e55d7a",
+        "question": [
+          "Compare CO2 emissions per capita for India and Indonesia since 2000"
+        ]
+      },
+      {
+        "id": "b90a8a5b5c8743a6aa1640eb10d7a639",
+        "question": [
+          "Which countries had the highest GDP per capita in the latest year?"
+        ]
+      },
+      {
+        "id": "e061b49bb84d404c9b48de037fe350ca",
+        "question": [
+          "Which three countries reduced the poverty rate the most since 2000?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "wb_demo.gold.country_indicator_wide",
+        "description": [
+          "One row per country and year, one column per World Bank indicator. Best for single-country trends and side-by-side comparisons."
+        ]
+      },
+      {
+        "identifier": "wb_demo.gold.indicator_facts",
+        "description": [
+          "Long format: one row per country, indicator and year with indicator names. Best for ranking countries on an indicator."
+        ]
+      },
+      {
+        "identifier": "wb_demo.silver.indicators",
+        "description": [
+          "Definitions and sources of each indicator."
+        ]
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "cd163f25643e43f7a13e201376e76d29",
+        "content": [
+          "Data is World Bank World Development Indicators for 20 countries, 2000 onward, as published (CC BY 4.0).",
+          "Units are in the column comments: _pct columns are percentages (0-100), gdp_per_capita_usd is current US dollars, co2_per_capita_t is tonnes CO2e per person, population is people.",
+          "poverty_3usd_day_pct is the share of people living on less than $3.00 a day (2021 PPP); it has gaps, so use the latest year that has a value and say which year it is.",
+          "For 'latest' questions use the most recent year with a non-null value for that indicator, per country, and always show the year.",
+          "Do not invent values for missing years; say the data is not available."
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "bfa3cf7112704b51b352a9f02215f93e",
+        "question": [
+          "What was Kenya's access to electricity in 2010 and in the latest year?"
+        ],
+        "sql": [
+          "SELECT year, electricity_access_pct FROM wb_demo.gold.country_indicator_wide WHERE country_iso3 = 'KEN' AND electricity_access_pct IS NOT NULL AND (year = 2010 OR year = (SELECT max(year) FROM wb_demo.gold.country_indicator_wide WHERE country_iso3 = 'KEN' AND electricity_access_pct IS NOT NULL)) ORDER BY year"
+        ]
+      }
+    ]
+  }
+}
