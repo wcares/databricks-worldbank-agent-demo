@@ -1,0 +1,31 @@
+# Observability job: audit/lineage views, agent request log from MLflow traces, job run history.
+resources:
+  jobs:
+    wb_ops:
+      name: wb_ops
+      description: Refresh audit views, agent request log and job run history in wb_demo.ops
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+      schedule:
+        quartz_cron_expression: "0 7 * * * ?"   # hourly at :07 (paused in dev deployments)
+        timezone_id: UTC
+      tasks:
+        - task_key: create_audit_views
+          notebook_task:
+            notebook_path: ../src/ops/create_audit_views.py
+        - task_key: export_agent_traces
+          notebook_task:
+            notebook_path: ../src/ops/export_agent_traces.py
+        - task_key: record_job_runs
+          notebook_task:
+            notebook_path: ../src/ops/record_job_runs.py
+        - task_key: record_model_versions
+          notebook_task:
+            notebook_path: ../src/ops/record_model_versions.py
+
+  dashboards:
+    agent_operations:
+      display_name: "Agent operations"
+      file_path: ../src/dashboards/agent_operations.lvdash.json
+      warehouse_id: ${var.warehouse_id}

@@ -1,0 +1,976 @@
+{
+  "datasets": [
+    {
+      "name": "requests",
+      "displayName": "Agent requests",
+      "query": "SELECT source, state, date_format(timestamp_millis(request_time), 'yyyy-MM-dd HH:mm') AS requested_at,\n  round(latency_ms / 1000.0, 1) AS latency_s, coalesce(correctness, '') AS correctness, question\nFROM wb_demo.ops.agent_requests"
+    },
+    {
+      "name": "versions",
+      "displayName": "Agent model versions",
+      "query": "SELECT version, concat('v', version, IF(aliases = '', '', concat(' (', aliases, ')'))) AS version_label,\n  correctness, relevance, safety, cites_source, declines_off_topic, llm_endpoint, aliases\nFROM wb_demo.ops.model_versions"
+    },
+    {
+      "name": "champion",
+      "displayName": "Champion model version",
+      "query": "SELECT version, correctness FROM wb_demo.ops.model_versions WHERE aliases LIKE '%champion%'"
+    },
+    {
+      "name": "jobs",
+      "displayName": "Job runs",
+      "query": "SELECT regexp_replace(job_name, '^\\\\[dev [^]]*\\\\] ', '') AS job,\n  date_format(start_time, 'yyyy-MM-dd HH:mm') AS started_at, duration_s, coalesce(result_state, life_cycle_state) AS result,\n  failed_tasks FROM wb_demo.ops.job_runs"
+    },
+    {
+      "name": "audit_daily",
+      "displayName": "Audit events per day",
+      "query": "SELECT date_format(event_time, 'yyyy-MM-dd') AS day,\n  IF(status_code >= 400, 'failed or denied', 'succeeded') AS outcome, count(*) AS events\nFROM wb_demo.ops.v_audit_wb_demo GROUP BY ALL"
+    },
+    {
+      "name": "denied",
+      "displayName": "Failed or denied requests",
+      "query": "SELECT date_format(event_time, 'yyyy-MM-dd HH:mm:ss') AS event_time, actor, service_name, action_name,\n  status_code, left(error_message, 160) AS error_message FROM wb_demo.ops.v_audit_denied"
+    }
+  ],
+  "pages": [
+    {
+      "name": "operations",
+      "displayName": "Operations",
+      "layout": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          },
+          "widget": {
+            "name": "title",
+            "textbox_spec": "# Agent operations\nRequests, latency and quality of the World Bank agent, pipeline job health, and audit events on `wb_demo`. Refreshed by the `wb_ops` job from MLflow traces, the Jobs API, the model registry and `system.access.audit`."
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "k_requests",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "requests",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "requests",
+                      "expression": "COUNT(`question`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "requests",
+                  "displayName": "Agent requests (all)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Agent requests (all)"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "k_latency",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "requests",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "avg_latency",
+                      "expression": "AVG(`latency_s`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_latency",
+                  "displayName": "Average latency (s)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average latency (s)"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "k_champion",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "champion",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "champion_correctness",
+                      "expression": "MAX(`correctness`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "champion_correctness",
+                  "displayName": "Champion correctness (eval)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Champion correctness (eval)"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 3,
+            "height": 6
+          },
+          "widget": {
+            "name": "b_versions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "versions",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "version_label",
+                      "expression": "`version_label`"
+                    },
+                    {
+                      "name": "correctness",
+                      "expression": "MAX(`correctness`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "version_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Model version"
+                },
+                "y": {
+                  "fieldName": "correctness",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Correctness (0-1)",
+                  "axis": {
+                    "title": "Correctness (0-1)"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Evaluation correctness by model version"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 4,
+            "width": 3,
+            "height": 6
+          },
+          "widget": {
+            "name": "b_sources",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "requests",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "source",
+                      "expression": "`source`"
+                    },
+                    {
+                      "name": "request_count",
+                      "expression": "COUNT(`question`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "source",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Source"
+                },
+                "y": {
+                  "fieldName": "request_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Requests",
+                  "axis": {
+                    "title": "Requests"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Requests by source"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 7
+          },
+          "widget": {
+            "name": "t_jobs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "jobs",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "job",
+                      "expression": "`job`"
+                    },
+                    {
+                      "name": "started_at",
+                      "expression": "`started_at`"
+                    },
+                    {
+                      "name": "duration_s",
+                      "expression": "`duration_s`"
+                    },
+                    {
+                      "name": "result",
+                      "expression": "`result`"
+                    },
+                    {
+                      "name": "failed_tasks",
+                      "expression": "`failed_tasks`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "job",
+                    "displayName": "Job",
+                    "title": "Job",
+                    "order": 100000,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "started_at",
+                    "displayName": "Started (UTC)",
+                    "title": "Started (UTC)",
+                    "order": 100001,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "duration_s",
+                    "displayName": "Duration (s)",
+                    "title": "Duration (s)",
+                    "order": 100002,
+                    "visible": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "result",
+                    "displayName": "Result",
+                    "title": "Result",
+                    "order": 100003,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "failed_tasks",
+                    "displayName": "Failed tasks",
+                    "title": "Failed tasks",
+                    "order": 100004,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Pipeline and agent job runs"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 6,
+            "height": 6
+          },
+          "widget": {
+            "name": "b_audit",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "audit_daily",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "events",
+                      "expression": "SUM(`events`)"
+                    },
+                    {
+                      "name": "outcome",
+                      "expression": "`outcome`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Day"
+                },
+                "y": {
+                  "fieldName": "events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Events",
+                  "axis": {
+                    "title": "Events"
+                  }
+                },
+                "color": {
+                  "fieldName": "outcome",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Outcome"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Audit events on wb_demo per day"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 6,
+            "height": 7
+          },
+          "widget": {
+            "name": "t_denied",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "denied",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "event_time",
+                      "expression": "`event_time`"
+                    },
+                    {
+                      "name": "actor",
+                      "expression": "`actor`"
+                    },
+                    {
+                      "name": "service_name",
+                      "expression": "`service_name`"
+                    },
+                    {
+                      "name": "action_name",
+                      "expression": "`action_name`"
+                    },
+                    {
+                      "name": "status_code",
+                      "expression": "`status_code`"
+                    },
+                    {
+                      "name": "error_message",
+                      "expression": "`error_message`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "event_time",
+                    "displayName": "Time (UTC)",
+                    "title": "Time (UTC)",
+                    "order": 100000,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "actor",
+                    "displayName": "Actor",
+                    "title": "Actor",
+                    "order": 100001,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "service_name",
+                    "displayName": "Service",
+                    "title": "Service",
+                    "order": 100002,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "action_name",
+                    "displayName": "Action",
+                    "title": "Action",
+                    "order": 100003,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "status_code",
+                    "displayName": "Status",
+                    "title": "Status",
+                    "order": 100004,
+                    "visible": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "error_message",
+                    "displayName": "Error",
+                    "title": "Error",
+                    "order": 100005,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Failed or denied requests (audit log)"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 6,
+            "height": 8
+          },
+          "widget": {
+            "name": "t_requests",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "requests",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "requested_at",
+                      "expression": "`requested_at`"
+                    },
+                    {
+                      "name": "source",
+                      "expression": "`source`"
+                    },
+                    {
+                      "name": "latency_s",
+                      "expression": "`latency_s`"
+                    },
+                    {
+                      "name": "correctness",
+                      "expression": "`correctness`"
+                    },
+                    {
+                      "name": "question",
+                      "expression": "`question`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "requested_at",
+                    "displayName": "Requested (UTC)",
+                    "title": "Requested (UTC)",
+                    "order": 100000,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "source",
+                    "displayName": "Source",
+                    "title": "Source",
+                    "order": 100001,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  },
+                  {
+                    "fieldName": "latency_s",
+                    "displayName": "Latency (s)",
+                    "title": "Latency (s)",
+                    "order": 100002,
+                    "visible": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "0.00"
+                  },
+                  {
+                    "fieldName": "correctness",
+                    "displayName": "Judge",
+                    "title": "Judge",
+                    "order": 100003,
+                    "visible": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false,
+                    "numberFormat": "0.00"
+                  },
+                  {
+                    "fieldName": "question",
+                    "displayName": "Question",
+                    "title": "Question",
+                    "order": 100004,
+                    "visible": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "preserveWhitespace": false,
+                    "useMonospaceFont": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Recent agent requests"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
