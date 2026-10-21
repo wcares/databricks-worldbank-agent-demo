@@ -11,5 +11,5 @@
 | Billing / job-run system tables | Absent — job health comes from Workflows UI + `ops.job_runs` | Catalog Explorer |
 | Models (Unity Gateway) | GPT OSS 120B, Qwen3 Next Instruct, Gemma 3 12B, GTE Large (En) | AI Gateway page |
 | Menus present (not yet exercised) | Genie Agents, AI Search, Apps, Lakebase, Serving, Experiments | UI |
-
-Open: account groups and service principal on Free Edition; Databricks CLI login on the dev machine.
+| Custom groups and service principal | OK — `wb_engineers`, `wb_analysts`, `wb_auditors`, `wb_agent_sp` created via `scripts/create_identities.sh` (run by the user) | Databricks CLI |
+| Databricks CLI on the dev machine | OK — v1.21.0, OAuth login, `bundle validate` passes | CLI |
