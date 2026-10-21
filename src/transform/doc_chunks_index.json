@@ -1,0 +1,14 @@
+{
+  "name": "wb_demo.gold.doc_chunks_index",
+  "endpoint_name": "wb_demo_vs",
+  "primary_key": "chunk_id",
+  "index_type": "DELTA_SYNC",
+  "delta_sync_index_spec": {
+    "source_table": "wb_demo.silver.doc_chunks",
+    "pipeline_type": "TRIGGERED",
+    "embedding_source_columns": [
+      {"name": "chunk_text", "embedding_model_endpoint_name": "databricks-gte-large-en"}
+    ],
+    "columns_to_sync": ["chunk_id", "doc_id", "country_iso3", "doc_type", "title", "doc_year", "section", "page_start", "page_end", "landing_url", "chunk_text"]
+  }
+}
