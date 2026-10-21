@@ -1,0 +1,20 @@
+# Release pipeline for the agent: rebuild the eval set, then log, evaluate, register and promote (gate).
+resources:
+  jobs:
+    wb_agent_release:
+      name: wb_agent_release
+      description: Evaluate the World Bank agent and promote it to champion if it scores at least as well
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: warehouse_id
+          default: ${var.warehouse_id}
+      tasks:
+        - task_key: build_eval_set
+          notebook_task:
+            notebook_path: ../src/eval/build_eval_set.py
+        - task_key: evaluate_and_register
+          depends_on:
+            - task_key: build_eval_set
+          notebook_task:
+            notebook_path: ../src/eval/evaluate_and_register.py
