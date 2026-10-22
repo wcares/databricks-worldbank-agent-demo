@@ -17,6 +17,11 @@ databricks api post /api/2.0/sql/statements --json "{\"warehouse_id\":\"$WH\",\"
   | python3 -c 'import sys,json;print("   warehouse:", json.load(sys.stdin)["status"]["state"])'
 
 echo "2/4 waking endpoint $ENDPOINT (a cold start can take several minutes)"
+# Free Edition removed the endpoint once (2026-10-22, no delete event in the audit log): recreate it if missing.
+if ! databricks serving-endpoints get "$ENDPOINT" >/dev/null 2>&1; then
+  echo "   endpoint missing: redeploying the champion model (about 10 minutes)"
+  (cd "$ROOT" && databricks bundle run wb_agent_release -t dev --only deploy_champion 2>&1 | grep -E "TERMINATED|FAILED" | tail -1)
+fi
 start=$(date +%s)
 # While the endpoint scales up from zero it answers with an error instead of JSON (seen on the first try),
 # so keep asking for up to ~15 minutes.

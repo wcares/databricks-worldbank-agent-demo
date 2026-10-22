@@ -63,7 +63,7 @@ GRANT SELECT ON SCHEMA wb_demo.gold TO `a8d69acf-15e5-44fa-9cf0-0406432dafb7`;
 -- a few minutes later (audit logs arrive with a delay):
 SELECT event_time, actor, action_name, request_params
 FROM wb_demo.ops.v_audit_wb_demo
-WHERE action_name = 'updatePermissions' ORDER BY event_time DESC;  -- action name to be confirmed after the first grant
+WHERE action_name = 'updatePermissions' ORDER BY event_time DESC;  -- also shows the failed 404 grant to workspace groups
 ```
 
 ## Free Edition notes for the audience
@@ -72,6 +72,8 @@ WHERE action_name = 'updatePermissions' ORDER BY event_time DESC;  -- action nam
   free daily limit. Please come back again tomorrow", hit on 2026-10-21 after a day of builds and evaluations).
   On demo day run only `scripts/warmup.sh` and the demo itself: no full pipeline runs, no evaluations, no
   redeploys. Rehearse on a different day from the demo.
+- The serving endpoint can be removed by the platform: on 2026-10-22 `wb-insights-agent` was gone (no delete in the
+  audit log) after the daily limit was hit. `scripts/warmup.sh` recreates it from the champion model if missing.
 - Serving endpoints must scale to zero, so the first request after idle is slow — hence the warm-up.
 - No inference tables on agent endpoints: the request log is built from MLflow traces (`ops.agent_requests`).
 - No job-run or billing system tables: job history comes from the Jobs API (`ops.job_runs`).
